@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import cv2
+import numpy as np
+gain = 128
+
+# создаем объект cap для захвата кадров с камеры
+cap = cv2.VideoCapture(0) # /dev/video0
+hsvMin = np.array((53,47,87), np.uint8)
+hsvMax = np.array((82,221,255), np.uint8)
+
+while True:
+    ret, frame = cap.read() #захватываем кадр
+    if ret:
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)#преобразуем в HSV
+        blur = cv2.GaussianBlur(hsv, (5, 5), 2)
+        thresh = cv2.inRange(hsv, hsvMin, hsvMax,)
+        
+        _, contours, hierarchy  = cv2.findContours(thresh.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+           
+        if contours:
+            # берем максимальный контур по периметру
+            mainContour = max(contours, key = cv2.contourArea)
+            M = cv2.moments(thresh)  #находим моменты
+            if len(mainContour) > 4:
+                ellipse = cv2.fitEllipse(mainContour)
+                cv2.ellipse(frame, ellipse, (0,255,0), 2)
+            '''    
+            dArea = M['m00']#момент нулевого порядка, количество точек в контуре
+            sumX = M['m10']#момент нулевого порядка, сумма всех координат по оси Х
+            sumY = M['m01']#момент нулевого порядка, сумма всех координат по оси Y
+            
+            if dArea != 0:   # если нет деления на ноль
+                x = int(sumX/dArea) # вычисляем координаты центра контура
+                y = int(sumY/dArea) # они получаются в пикселях кадра
+                
+                #cv2.circle(frame, (x,y), 10, (0,255,0), -1)#отрисовка круга в центре
+                #cv2.putText(frame, '%d-%d' % (cx,cy), (cx+10, cy-10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2,)
+
+                cv2.drawContours(frame, mainContour, -1, (0, 0, 255), 2, cv2.FILLED) #отображаем контуры на изображении
+                '''
+
+        cv2.imshow('HSV', frame) #отображаем кадр
+        
+        key = cv2.waitKey(1) & 0xFF  #ждем нажатия клавиши
+        if key == ord('q'): #если нажата Q тогда выходим
+            break
+    else:
+        break
+
+cap.release() #освобождаем cap
+cv2.destroyAllWindows() #закрываем все окна
